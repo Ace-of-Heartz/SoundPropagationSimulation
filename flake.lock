@@ -1,0 +1,59 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1723637854,
+        "narHash": "sha256-med8+5DSWa2UnOqtdICndjDAEjxr5D7zaIiK4pn0Q7c=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "c3aa7b8938b17aebd2deecf7be0636000d62a2b9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1698318101,
+        "narHash": "sha256-gUihHt3yPD7bVqg+k/UVHgngyaJ3DMEBchbymBMvK1E=",
+        "path": "/nix/store/35dcag44a0ymww0vy0s4jjgxwpv9g62d-source",
+        "rev": "63678e9f3d3afecfeafa0acead6239cdb447574c",
+        "type": "path"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "scientific-fhs": "scientific-fhs"
+      }
+    },
+    "scientific-fhs": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1720720869,
+        "narHash": "sha256-e1WEsgUbDeb7UrWoV0FSUcBnVO3bjtgf7nrnsLJAif4=",
+        "owner": "olynch",
+        "repo": "scientific-fhs",
+        "rev": "e7be814fa1f1bafaea39422bfc84b68bbc011e52",
+        "type": "github"
+      },
+      "original": {
+        "owner": "olynch",
+        "repo": "scientific-fhs",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
