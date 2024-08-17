@@ -1,5 +1,5 @@
 { 
-  description = "Julia env flake";
+  description = "Julia project flake";
 
   inputs = {
     nixgl.url = "github:nix-community/nixGL";
@@ -15,6 +15,10 @@
       };
     in {
       devShells.${system}.default = pkgs.mkShell {
+        buildInputs = [
+          pkgs.nixgl.nixGLIntel
+        ];
+
         packages = with pkgs; [
           julia-bin
           gr-framework
@@ -23,6 +27,9 @@
           glfw
         ];
 
+        shellHook = ''
+          nixGLIntel julia
+        '';
       };
       
     };
