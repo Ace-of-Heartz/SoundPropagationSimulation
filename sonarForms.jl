@@ -60,14 +60,14 @@ end
     Accumulate a vector of change in ray attributes with weights. 
 """
 function AccPropagationChange(Δrays :: Vector{RayChangeData}, weightVec :: Vector{Float32}) :: RayChangeData
-    accΔProp  = [0.0,0.0,0.0];
+    accΔProp :: Vector{Float32} = [0.0,0.0,0.0];
     accΔAngle = 0.0;
     accΔSpeed = 0.0;
     
     for i = 1:length(Δrays)
-        accΔProp  += Δrays[i].ΔDistance * weightVec;
-        accΔAngle += Δrays[i] * weightVec;
-        accΔSpeed += Δrays[i] * weightVec;
+        accΔProp  += Δrays[i].ΔDistance .* weightVec[i];
+        accΔAngle += Δrays[i].ΔAngle * weightVec[i];
+        accΔSpeed += Δrays[i].ΔSpeed * weightVec[i];
     end
 
     return RayChangeData(accΔProp,accΔAngle,accΔSpeed);

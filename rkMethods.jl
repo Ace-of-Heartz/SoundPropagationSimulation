@@ -1,3 +1,15 @@
+include("sonarForms.jl");
+#
+
+"""
+    Data for storing a ray, the elapsed time between each step, and the maximum number of steps. 
+"""
+struct SimulationData
+    ray :: RayData
+
+    stepSize :: Float32 #Time between each step 
+    maxStep  :: Int32
+end    
 
 """
     ConstantForwardPropFunc(ray :: RayData, step :: Float32) :: RayData
@@ -29,7 +41,7 @@ function EulerMethod(data :: SimulationData)
         rays[i] = ray;
         timeVals[i] = data.stepSize * i;
 
-        ray = ApplyPropagationChange(ray,ΔPropagation(ray,data.stepSize));      
+        ray = ApplyPropagationChange(ray,ΔPropagation(ray,data.stepSize),Float32(1.0));      
     end 
     return (timeVals,rays);
 end
@@ -51,12 +63,12 @@ function HeunMethod(data :: SimulationData)
         rays[i] = ray;
         timeVals[i] = data.stepSize * i;
         
-        intermidiateRay = ApplyPropagationChange(ray,ΔPropagation(ray, data.stepSize));
+        intermidiateRay = ApplyPropagationChange(ray,ΔPropagation(ray, data.stepSize),1.0);
         
         Δray₀ = ΔPropagation(ray,data.stepSize / 2);
         Δray₁ = ΔPropagation(intermidiateRay,data.stepSize / 2); # ??? tᵢ₊₁ = tᵢ + h ???
 
-        ray = ApplyPropagationChange(ApplyPropagationChange(ray,Δray₀),Δray₁);
+        ray = ApplyPropagationChange(ApplyPropagationChange(ray,Δray₀,1.0),Δray₁,1.0);
     end
     return (timeVals,rays)
 end
@@ -72,14 +84,14 @@ function RK45(data :: SimulationData)
     rays = Vector{RayData}(undef, data.maxStep);
     timeVals = Vector{Float32}(undef, data.maxStep);
 
-    coMatrix = [
+    coMatrix :: Matrix{Float32} = [
         0.0 0.0 0.0 0.0; 
-        1.0/2.0 1/2.0 0.0 0.0;
+        1.0/2.0 1.0/2.0 0.0 0.0;
         1.0/2.0 0.0 1.0/2.0 0.0;
         1.0 0.0 0.0 1.0
     ];
 
-    weightVec = [ 1/6 1/3 1/3 1/6];
+    weightVec :: Vector{Float32} = [ 1.0/6.0 , 1.0/3.0 , 1.0/3.0 , 1.0/6.0];
 
     for i = 1:data.maxStep
         rays[i] = ray;
@@ -104,7 +116,7 @@ function GeneralRKMethod(data :: SimulationData, coMatrix :: Matrix{Float32}, we
 
     accΔRay = AccPropagationChange(cache,weightVec);
 
-    return ApplyPropagationChange(data.ray,accΔRay,1.0);
+    return ApplyPropagationChange(data.ray,accΔRay,Float32(1.0));
 end
 
 """
@@ -119,20 +131,20 @@ function ComputeRKIntermidiateValues(data :: SimulationData , coMatrix :: Matrix
         error("Bad matrix dimensions!");
     end
 
-    cache = Vector{Float32}(undef,m);
+    cache = Vector{RayChangeData}(undef,m);
 
-    cache[1] = ΔPropagation(data.ray,data.stepSize * coMatrix[1][1]);
+    cache[1] = ΔPropagation(data.ray,data.stepSize * coMatrix[1, 1]);
 
-
+    print(cache);
     for i = 2:m
 
-        for j = 2:n
+        for j = 2:i
             cache[i] = ΔPropagation(
                 ApplyPropagationChange(
                     data.ray,
-                    cache[j],
-                    coMatrix[i][j]),
-                data.stepSize * coMatrix[i][1]
+                    cache[j-1],
+                    coMatrix[i, j]),
+                data.stepSize * coMatrix[i, 1]
                 );
         end
 
