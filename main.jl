@@ -4,25 +4,28 @@ Pkg.add("GLMakie")
 using GLMakie;
 using LinearAlgebra;
 
-struct RayData 
-    position :: Vector{Float32}
-    angle    :: Float32     
-    speed    :: Float32
-end
+# struct RayData 
+#     position :: Vector{Float32}
+#     angle    :: Float32     
+#     speed    :: Float32
+# end
 
-struct RayChangeData 
-    ΔDistance :: Vector{Float32}
-    ΔAngle    :: Float32 
-    ΔSpeed    :: Float32
-end
+# struct RayChangeData 
+#     ΔDistance :: Vector{Float32}
+#     ΔAngle    :: Float32 
+#     ΔSpeed    :: Float32
+# end
 
-struct LayerData
-    temperature :: Float32 
-    salinity    :: Float32
-    depth       :: Float32
+# struct LayerData
+#     temperature :: Float32 
+#     salinity    :: Float32
+#     depth       :: Float32
 
-end
+# end
 
+"""
+    Data for storing a ray, the elapsed time between each step, and the maximum number of steps. 
+"""
 struct SimulationData
     ray :: RayData
 
@@ -30,6 +33,10 @@ struct SimulationData
     maxStep  :: Int32
 end    
 
+
+"""
+    Data for holding different values to be visualized using plots.
+"""
 struct PlotData 
     speedVals           :: Vector{Float32}
     positionVals        :: Vector{Vector{Float32}}
@@ -114,143 +121,208 @@ function PlotData(plotDatas)
 end
 
 
-function EulerMethod(data :: SimulationData)
-    ray = data.ray;
+# function EulerMethod(data :: SimulationData)
+#     ray = data.ray;
     
-    rays = Vector{RayData}(undef,data.maxStep);
-    timeVals = Vector{Float32}(undef,data.maxStep);
+#     rays = Vector{RayData}(undef,data.maxStep);
+#     timeVals = Vector{Float32}(undef,data.maxStep);
 
-    for i = 1:data.maxStep 
-        rays[i] = ray;
-        timeVals[i] = data.stepSize * i;
+#     for i = 1:data.maxStep 
+#         rays[i] = ray;
+#         timeVals[i] = data.stepSize * i;
 
-        ray = ApplyPropagationChange(ray,ΔPropagation(ray,data.stepSize));      
-    end 
-    return (timeVals,rays);
-end
+#         ray = ApplyPropagationChange(ray,ΔPropagation(ray,data.stepSize));      
+#     end 
+#     return (timeVals,rays);
+# end
 
-function HeunMethod(data :: SimulationData)
-    ray = data.ray;
+# function HeunMethod(data :: SimulationData)
+#     ray = data.ray;
 
-    rays = Vector{RayData}(undef, data.maxStep);
-    timeVals = Vector{Float32}(undef, data.maxStep);
+#     rays = Vector{RayData}(undef, data.maxStep);
+#     timeVals = Vector{Float32}(undef, data.maxStep);
 
-    for i = 1:data.maxStep
-        rays[i] = ray;
-        timeVals[i] = data.stepSize * i;
+#     for i = 1:data.maxStep
+#         rays[i] = ray;
+#         timeVals[i] = data.stepSize * i;
         
-        intermidiateRay = ApplyPropagationChange(ray,ΔPropagation(ray, data.stepSize));
+#         intermidiateRay = ApplyPropagationChange(ray,ΔPropagation(ray, data.stepSize));
         
-        Δray₀ = ΔPropagation(ray,data.stepSize / 2);
-        Δray₁ = ΔPropagation(intermidiateRay,data.stepSize / 2); # ??? tᵢ₊₁ = tᵢ + h ???
+#         Δray₀ = ΔPropagation(ray,data.stepSize / 2);
+#         Δray₁ = ΔPropagation(intermidiateRay,data.stepSize / 2); # ??? tᵢ₊₁ = tᵢ + h ???
 
-        ray = ApplyPropagationChange(ApplyPropagationChange(ray,Δray₀),Δray₁);
-    end
-    return (timeVals,rays)
-end
-
-
-function RK45(data :: SimulationData)
-    ray = data.ray;
-
-    rays = Vector{RayData}(undef, data.maxStep);
-    timeVals = Vector{Float32}(undef, data.maxStep);
-
-    for i = 1:data.maxStep
-        rays[i] = ray;
-        timeVals[i] = data.stepSize * i;
-
-        k₁ = ΔPropagation(ray,data.stepSize)
-        k₂ = ΔPropagation(ray,data.stepSize * 1/2)
-        # k₃ = 
-        # k₄ = 
-    end
-
-end
+#         ray = ApplyPropagationChange(ApplyPropagationChange(ray,Δray₀),Δray₁);
+#     end
+#     return (timeVals,rays)
+# end
 
 
+# function RK45(data :: SimulationData)
+#     ray = data.ray;
 
-function ApplyPropagationChange(ray₀ :: RayData, Δray :: RayChangeData)::RayData
-    ray₁ = RayData(
-        ray₀.position + Δray.ΔDistance,
-        ray₀.angle + Δray.ΔAngle,
-        ray₀.speed + Δray.ΔSpeed
-        );
-end
+#     rays = Vector{RayData}(undef, data.maxStep);
+#     timeVals = Vector{Float32}(undef, data.maxStep);
 
-function ΔPropagation(ray::RayData, step::Float32)::RayChangeData
-    ξ = cos(ray.angle) / ray.speed;
+#     coMatrix = [
+#         0.0 0.0 0.0 0.0; 
+#         1.0/2.0 1/2.0 0.0 0.0;
+#         1.0/2.0 0.0 1.0/2.0 0.0;
+#         1.0 0.0 0.0 1.0
+#     ];
 
-    dirVec  = [cos(ray.angle),sin(ray.angle), 0.0];
-    propVec = ray.speed * step .* dirVec;
+#     weightVec = [ 1/6 1/3 1/3 1/6];
 
-    depth₀ = ray.position[2];
-    speed₀  = ray.speed;
+#     for i = 1:data.maxStep
+#         rays[i] = ray;
+#         timeVals[i] = data.stepSize * i;
 
-    # This feels weird . . . 
-    # Normally you would get the new depth information from raytracing, and intersection certain layers of water
-    # So please review this
-    tempPos = ray.position + propVec;
-    depth₁  = tempPos[2];
+#         ray = GeneralRKMethod(data,coMatrix,weightVec);
+#     end
 
-    Δy  = (ray.position + propVec)[2] - depth₀  
+#     return (timeVals,rays);
+# end
 
-    layerData = LayerData(2.0,34.7,depth₁); # TODO: Make this not constant
+# function GeneralRKMethod(data :: SimulationData, coMatrix :: Matrix{Float32}, weightVec :: Vector{Float32}) 
+#     cache = ComputeRKIntermidiateValues(data, coMatrix);
+        
+#     s = length(weightVec);
 
-    speed₁ = CoppensFormula(layerData);
-    ΔSpeed = speed₁ - speed₀
+#     accΔRay = AccPropagationChange(cache,weightVec);
 
-    v₀ = ΔSpeed / Δy;
+#     return ApplyPropagationChange(data.ray,accΔRay,1.0);
+# end
 
-    α = ξ^2 * speed₀^2;
-    β = ξ^2 * speed₁^2;
+# function ComputeRKIntermidiateValues(data :: SimulationData , coMatrix :: Matrix{Float32})
+    
+#     (m,n) = (size(coMatrix,1),size(coMatrix,2));
+#     if(n != m)
+#         error("Bad matrix dimensions!");
+#     end
 
-    if (β >= 1)
-        Δx = 2 / (ξ * v₀) * sqrt(1-α)
-    else
-        Δx = 1/(ξ * v₀) * ( sqrt(1-α) - sqrt(1-β) )
-    end
+#     cache = Vector{Float32}(undef,m);
 
-    ΔDistance = Vector([Δx,Δy,0.0])
-
-    localθ₀ = atan((tempPos[2] - ray.position[2])/ (tempPos[1] - ray.position[1]));
-    localθ₁ = atan(Δy / Δx);
-
-    Δθ = localθ₁ - localθ₀;
-
-    ΔRay = RayChangeData(ΔDistance,Δθ,ΔSpeed);
-
-    return ΔRay;
-end
-
-function ConstantForwardPropFunc(ray :: RayData, step :: Float32)::RayData
-    propVec = ray.speed * step .* [cos(ray.angle),sin(ray.angle),0.0];
-
-    pos₁ = ray.position + propVec;
+#     cache[1] = ΔPropagation(data.ray,data.stepSize * coMatrix[1][1]);
 
 
-    RayData(pos₁, ray.angle,ray.speed);
-end
+#     for i = 2:m
+
+#         for j = 2:n
+#             cache[i] = ΔPropagation(
+#                 ApplyPropagationChange(
+#                     data.ray,
+#                     cache[j],
+#                     coMatrix[i][j]),
+#                 data.stepSize * coMatrix[i][1]
+#                 );
+#         end
+
+#     end
+
+#     return cache;
+# end
+
+# function AccPropagationChange(Δrays :: Vector{RayChangeData}, weightVec :: Vector{Float32})
+#     accΔProp  = [0.0,0.0,0.0];
+#     accΔAngle = 0.0;
+#     accΔSpeed = 0.0;
+    
+#     for i = 1:length(Δrays)
+#         accΔProp  += Δrays[i].ΔDistance * weightVec;
+#         accΔAngle += Δrays[i] * weightVec;
+#         accΔSpeed += Δrays[i] * weightVec;
+#     end
+
+#     return RayChangeData(accΔProp,accΔAngle,accΔSpeed);
+# end
+
+# function ApplyPropagationChange(ray₀ :: RayData, Δray :: RayChangeData, w :: Float32)::RayData
+#     ray₁ = RayData(
+#         ray₀.position + Δray.ΔDistance * w,
+#         ray₀.angle + Δray.ΔAngle * w,
+#         ray₀.speed + Δray.ΔSpeed * w
+#         );
+# end
+
+# function ΔPropagation(ray::RayData, step::Float32)::RayChangeData
+#     ξ = cos(ray.angle) / ray.speed;
+
+#     dirVec  = [cos(ray.angle),sin(ray.angle), 0.0];
+#     propVec = ray.speed * step .* dirVec;
+
+#     depth₀ = ray.position[2];
+#     speed₀  = ray.speed;
+
+#     # This feels weird . . . 
+#     # Normally you would get the new depth information from raytracing, and intersection certain layers of water
+#     # So please review this
+#     tempPos = ray.position + propVec;
+#     depth₁  = tempPos[2];
+
+#     Δy  = (ray.position + propVec)[2] - depth₀  
+
+#     layerData = LayerData(2.0,34.7,depth₁); # TODO: Make this not constant
+
+#     speed₁ = CoppensFormula(layerData);
+#     ΔSpeed = speed₁ - speed₀
+
+#     v₀ = ΔSpeed / Δy;
+
+#     α = ξ^2 * speed₀^2;
+#     β = ξ^2 * speed₁^2;
+
+#     if (β >= 1)
+#         Δx = 2 / (ξ * v₀) * sqrt(1-α)
+#     else
+#         Δx = 1/(ξ * v₀) * ( sqrt(1-α) - sqrt(1-β) )
+#     end
+
+#     ΔDistance = Vector([Δx,Δy,0.0])
+
+#     localθ₀ = atan((tempPos[2] - ray.position[2])/ (tempPos[1] - ray.position[1]));
+#     localθ₁ = atan(Δy / Δx);
+
+#     Δθ = localθ₁ - localθ₀;
+
+#     ΔRay = RayChangeData(ΔDistance,Δθ,ΔSpeed);
+#     print("
+#         $α\t 
+#         $β\t
+#         $tempPos\t
+#         $Δθ\t 
+#         \n  
+#     ")
+
+#     return ΔRay;
+# end
+
+# function ConstantForwardPropFunc(ray :: RayData, step :: Float32)::RayData
+#     propVec = ray.speed * step .* [cos(ray.angle),sin(ray.angle),0.0];
+
+#     pos₁ = ray.position + propVec;
+
+
+#     RayData(pos₁, ray.angle,ray.speed);
+# end
 
 
 
-function CoppensFormula(layerData :: LayerData)
-    d = layerData.depth / 1000.0;
-    s = layerData.salinity / 1000.0;
-    t = layerData.temperature / 10;
+# function CoppensFormula(layerData :: LayerData)
+#     d = layerData.depth / 1000.0;
+#     s = layerData.salinity / 1000.0;
+#     t = layerData.temperature / 10;
 
-    c₀ = CoppensFormulaBase(LayerData(layerData.temperature,layerData.salinity,0.0));
+#     c₀ = CoppensFormulaBase(LayerData(layerData.temperature,layerData.salinity,0.0));
 
-    c₀ + (16.23 + 0.253 * t) * d + (0.213 - 0.1 * t) * d^2 + (0.016 + 0.0002 * (s - 35.0)) * (s - 35.0) * t * d; 
-end
+#     c₀ + (16.23 + 0.253 * t) * d + (0.213 - 0.1 * t) * d^2 + (0.016 + 0.0002 * (s - 35.0)) * (s - 35.0) * t * d; 
+# end
 
-function CoppensFormulaBase(layerData :: LayerData)
-    d = layerData.depth / 1000.0     # Depth in kilometers
-    s = layerData.salinity / 1000.0  # Salinity in parts per thousand
-    t = layerData.temperature / 10;  # temperature
+# function CoppensFormulaBase(layerData :: LayerData)
+#     d = layerData.depth / 1000.0     # Depth in kilometers
+#     s = layerData.salinity / 1000.0  # Salinity in parts per thousand
+#     t = layerData.temperature / 10;  # temperature
 
-    1449.05 + 45.7 * t - 5.21 * t^2 + 0.23 * t^3 + (1.333 - 0.126 * t + 0.009 * t^2) * (s - 35.0)
-end
+#     1449.05 + 45.7 * t - 5.21 * t^2 + 0.23 * t^3 + (1.333 - 0.126 * t + 0.009 * t^2) * (s - 35.0)
+# end
 
 
 function ShootRays(
@@ -287,7 +359,7 @@ function ShootRays(
         ray = RayData(initPos,angle,startingSpeed);
         simData = SimulationData(ray,timeInterval,maxSteps);
         
-        (timeVals,rays) = HeunMethod(simData);
+        (timeVals,rays) = EulerMethod(simData);
         
         push!(plotDatas,PreparePlotData(rays,timeVals));
     end
