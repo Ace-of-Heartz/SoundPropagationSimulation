@@ -25,6 +25,22 @@ function ConstantForwardPropFunc(ray :: RayData, step :: Float32) :: RayData
     RayData(pos₁, ray.angle,ray.speed);
 end
 
+function March(data :: SimulationData)
+    ray = data.ray;
+    
+    rays = Vector{RayData}(undef,data.maxStep);
+    timeVals = Vector{Float32}(undef,data.maxStep);
+
+    for i = 1:data.maxStep 
+        rays[i] = ray;
+        timeVals[i] = data.stepSize * i;
+
+        ray = ConstantForwardPropFunc(ray,data.stepSize);      
+    end 
+    return (timeVals,rays);
+end
+
+
 """
     EulerMethod(data :: SimulationData)
 
@@ -133,9 +149,8 @@ function ComputeRKIntermidiateValues(data :: SimulationData , coMatrix :: Matrix
 
     cache = Vector{RayChangeData}(undef,m);
 
-    cache[1] = ΔPropagation(data.ray,data.stepSize * coMatrix[1, 1]);
+    cache[1] = ΔPropagation(data.ray,data.stepSize + data.stepSize * coMatrix[1, 1]);
 
-    print(cache);
     for i = 2:m
 
         for j = 2:i

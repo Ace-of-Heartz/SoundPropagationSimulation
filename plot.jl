@@ -62,31 +62,31 @@ function PlotData(plotDatas)
     ];
 
 
-    Axis(fig[1,1], title = "Ray Paths")
+    Axis(fig[1,1], title = "Ray Paths", yreversed = true);
 
-    for i in eachindex(labels)
-        for j in eachindex(plotDatas)
-            Axis(fig[2,1][j, i], title = titles[i],
-                xlabel = labels[i][1],
-                ylabel = labels[i][2]
-            );
-        end
-    end
+    # for i in eachindex(labels)
+    #     for j in eachindex(plotDatas)
+    #         Axis(fig[2,1][j, i], title = titles[i],
+    #             xlabel = labels[i][1],
+    #             ylabel = labels[i][2]
+    #         );
+    #     end
+    # end
 
     
     for i in eachindex(plotDatas)
         plotData = plotDatas[i];
-
-        lines!(
-            fig[2,1][i,2],
-            plotData.timeVals,
-            plotData.speedVals,
-            );
-        lines!(
-            fig[2,1][i,1],
-            map(x -> x[2],plotData.positionVals),
-            plotData.speedVals,
-        );
+        
+        # lines!(
+        #     fig[2,1][i,2],
+        #     plotData.timeVals,
+        #     plotData.speedVals,
+        #     );
+        # lines!(
+        #     fig[2,1][i,1],
+        #     map(x -> x[2],plotData.positionVals),
+        #     plotData.speedVals,
+        # );
         
         append!(xPlots,map(x -> x[1],plotData.positionVals));
         append!(yPlots,map(x -> x[2],plotData.positionVals)); 

@@ -64,7 +64,7 @@ function AccPropagationChange(Δrays :: Vector{RayChangeData}, weightVec :: Vect
     accΔAngle = 0.0;
     accΔSpeed = 0.0;
     
-    for i = 1:length(Δrays)
+    for i in eachindex(Δrays)
         accΔProp  += Δrays[i].ΔDistance .* weightVec[i];
         accΔAngle += Δrays[i].ΔAngle * weightVec[i];
         accΔSpeed += Δrays[i].ΔSpeed * weightVec[i];
@@ -91,8 +91,10 @@ end
 function ΔPropagation(ray::RayData, step::Float32)::RayChangeData
     ξ = cos(ray.angle) / ray.speed;
 
-    dirVec  = [cos(ray.angle),sin(ray.angle), 0.0];
-    propVec = ray.speed * step .* dirVec;
+    dirVec  = normalize([cos(ray.angle),sin(ray.angle), 0.0],2);
+    propVec = ray.speed * step * dirVec;
+
+
 
     depth₀ = ray.position[2];
     speed₀  = ray.speed;
@@ -130,10 +132,16 @@ function ΔPropagation(ray::RayData, step::Float32)::RayChangeData
 
     ΔRay = RayChangeData(ΔDistance,Δθ,ΔSpeed);
     print("
-        $α\t 
-        $β\t
-        $tempPos\t
-        $Δθ\t 
+        step: $step\t
+        dirVec:  $dirVec\t
+        propVec: $propVec\t 
+        ray: $ray\t
+        α: $α\t 
+        β: $β\t
+        tempPos: $tempPos\t
+        Δθ: $Δθ\t
+        localθ₀: $localθ₀\t 
+        localθ₁: $localθ₁\t 
         \n  
     ")
 
