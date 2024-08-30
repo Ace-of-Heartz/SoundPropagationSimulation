@@ -1,123 +1,72 @@
-include("sonarForms.jl");
-#
+include("rkData.jl");
+include("soundFormulas.jl")
+include("utils.jl");
+
 
 """
     Data for storing a ray, the elapsed time between each step, and the maximum number of steps. 
 """
 struct SimulationData
-    ray :: RayData
+    ray :: GenericRayData
 
     stepSize :: Float32 #Time between each step 
     maxStep  :: Int32
 end    
 
 """
-    ConstantForwardPropFunc(ray :: RayData, step :: Float32) :: RayData
-
-    Function used for debugging simple raymarching
-"""
-function ConstantForwardPropFunc(ray :: RayData, step :: Float32) :: RayData
-    propVec = ray.speed * step .* [cos(ray.angle),sin(ray.angle),0.0];
-
-    pos₁ = ray.position + propVec;
-
-
-    RayData(pos₁, ray.angle,ray.speed);
-end
-
-function March(data :: SimulationData)
-    ray = data.ray;
-    
-    rays = Vector{RayData}(undef,data.maxStep);
-    timeVals = Vector{Float32}(undef,data.maxStep);
-
-    for i = 1:data.maxStep 
-        rays[i] = ray;
-        timeVals[i] = data.stepSize * i;
-
-        ray = ConstantForwardPropFunc(ray,data.stepSize);      
-    end 
-    return (timeVals,rays);
-end
-
-
-"""
-    EulerMethod(data :: SimulationData)
-
-    Implementation of Euler's method for calculating the propagation of sound in sea water.
-    
-"""
-function EulerMethod(data :: SimulationData)
-    ray = data.ray;
-    
-    rays = Vector{RayData}(undef,data.maxStep);
-    timeVals = Vector{Float32}(undef,data.maxStep);
-
-    for i = 1:data.maxStep 
-        rays[i] = ray;
-        timeVals[i] = data.stepSize * i;
-
-        ray = ApplyPropagationChange(ray,ΔPropagation(ray,data.stepSize),Float32(1.0));      
-    end 
-    return (timeVals,rays);
-end
-
-
-"""
-    HeunMethod(data :: SimulationData)
-
-    Implementation of Heun's method for calculating the propagation of sound in sea water.
-
-"""
-function HeunMethod(data :: SimulationData)
-    ray = data.ray;
-
-    rays = Vector{RayData}(undef, data.maxStep);
-    timeVals = Vector{Float32}(undef, data.maxStep);
-
-    for i = 1:data.maxStep
-        rays[i] = ray;
-        timeVals[i] = data.stepSize * i;
-        
-        intermidiateRay = ApplyPropagationChange(ray,ΔPropagation(ray, data.stepSize),1.0);
-        
-        Δray₀ = ΔPropagation(ray,data.stepSize / 2);
-        Δray₁ = ΔPropagation(intermidiateRay,data.stepSize / 2); # ??? tᵢ₊₁ = tᵢ + h ???
-
-        ray = ApplyPropagationChange(ApplyPropagationChange(ray,Δray₀,1.0),Δray₁,1.0);
-    end
-    return (timeVals,rays)
-end
-
-"""
     RK45(data :: SimulationData)
 
     Implementation of Runge Kutta 4(5) for calculating the propagation of sound in sea water.
 """
-function RK45(data :: SimulationData)
+function RKMethod(data :: SimulationData, rkData :: RKData)
     ray = data.ray;
 
-    rays = Vector{RayData}(undef, data.maxStep);
-    timeVals = Vector{Float32}(undef, data.maxStep);
-
-    coMatrix :: Matrix{Float32} = [
-        0.0 0.0 0.0 0.0; 
-        1.0/2.0 1.0/2.0 0.0 0.0;
-        1.0/2.0 0.0 1.0/2.0 0.0;
-        1.0 0.0 0.0 1.0
-    ];
-
-    weightVec :: Vector{Float32} = [ 1.0/6.0 , 1.0/3.0 , 1.0/3.0 , 1.0/6.0];
+    rays = Vector{GenericRayData}(undef, data.maxStep);
+    arclength = Float32(0.0);
+    arclengths = []
 
     for i = 1:data.maxStep
+        arclengths = [arclengths ; arclength];
         rays[i] = ray;
-        timeVals[i] = data.stepSize * i;
 
-        ray = GeneralRKMethod(data,coMatrix,weightVec);
+        arclength += data.stepSize; 
+        ray = GeneralRKMethod(ray,data.stepSize,rkData);
+        
     end
 
-    return (timeVals,rays);
+    return (arclengths,rays);
+end 
+
+# TODO: Test this out
+function RKMethod(
+    diffEq :: Function,
+    u₀,
+    stepSize,
+    maxStep,
+    p ,
+    rkData :: RKData
+)
+    u = u₀
+    du = Vector{<:AbstractFloat}(0.0,4);
+    
+    s = 0.0;
+    
+    arclengths = [];
+    rayAttributes = [];
+
+    for i = 0:maxStep 
+        arclengths = [arclengths ; s];
+        rayAttributes = [rayAttributes; u];
+
+        u = ComputeRKNextValue(diffEq,u,p,rkData,stepSize);
+        s += stepSize;
+    end
+
+    return (arclengths,rays);
 end
+
+
+
 
 """
     GeneralRKMethod(data :: SimulationData, coMatrix :: Matrix{Float32}, weightVec :: Vector{Float32})
@@ -125,14 +74,11 @@ end
     Calculates the next ray's attributes using a general coefficient matrix 
     and a vector of weights defined by various Runge Kutta methods.
 """
-function GeneralRKMethod(data :: SimulationData, coMatrix :: Matrix{Float32}, weightVec :: Vector{Float32}) 
-    cache = ComputeRKIntermidiateValues(data, coMatrix);
-        
-    s = length(weightVec);
+function GeneralRKMethod(ray :: GenericRayData,stepSize :: Float32, rkData :: RKData) 
+    intValues = ComputeRKIntermidiateValues(ray,stepSize, rkData.comatrix);
+    ΔRay = SumRayAttributeChanges(intValues,rkData.weightVector);
 
-    accΔRay = AccPropagationChange(cache,weightVec);
-
-    return ApplyPropagationChange(data.ray,accΔRay,Float32(1.0));
+    return ApplyRayAttributesChanges(ray,ΔRay);
 end
 
 """
@@ -140,30 +86,58 @@ end
 
     Calculates the intermidiate changes of the ray attributes for further computations.
 """
-function ComputeRKIntermidiateValues(data :: SimulationData , coMatrix :: Matrix{Float32})
+function ComputeRKIntermidiateValues(ray :: GenericRayData, stepSize :: Float32 , coMatrix :: Matrix{Float32})
     
     (m,n) = (size(coMatrix,1),size(coMatrix,2));
     if(n != m)
         error("Bad matrix dimensions!");
     end
 
-    cache = Vector{RayChangeData}(undef,m);
+    intValues = Vector{GenericRayDataChange}(undef,m);
 
-    cache[1] = ΔPropagation(data.ray,data.stepSize + data.stepSize * coMatrix[1, 1]);
+    intValues[1] = ΔRayAttributes(stepSize + stepSize * coMatrix[1,1],ray) #This is probably not right, recalc this please
 
     for i = 2:m
 
         for j = 2:i
-            cache[i] = ΔPropagation(
-                ApplyPropagationChange(
-                    data.ray,
-                    cache[j-1],
-                    coMatrix[i, j]),
-                data.stepSize * coMatrix[i, 1]
+            intValues[i] = ΔRayAttributes(
+                stepSize + stepSize * coMatrix[i, 1],
+                ApplyRayAttributesChanges(
+                    ray,
+                    intValues[j-1],
+                    coMatrix[i, j])
                 );
         end
-
     end
 
-    return cache;
+    return intValues;
+end
+
+function ComputeRKNextValue(diffEq :: Function, u, p, rkData ::RKData, stepSize :: AbstractFloat)
+    (m,n) = (size(coMatrix,1),size(coMatrix,2));
+    if(m != n-1)
+        error("Bad matrix dimensions!");
+    end
+
+    ks = Vector{GenericRayDataChange}(undef,m);
+
+    du = diffEq(u,p);
+    ks[1] = du;
+
+    # Because our differential equation won't depend on arclength, we can forgo the entire section about using different stepsizes
+    for i = 2:m
+        kᵢ = u;
+        for j = 1:(i-1)
+            kᵢ += ks[j] * rkData.comatrix[i,j]
+        end
+        ks[i] = kᵢ;
+        du = diffEq(u,p,t) .* stepSize; 
+    end
+
+    uᵢ₊₁ = u;
+    for i in eachindex(rkData.weightVector)
+        uᵢ₊₁ += ks[i] * rkData.weightVector[i];
+    end
+
+    return uᵢ₊₁;
 end

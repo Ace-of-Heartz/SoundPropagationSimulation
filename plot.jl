@@ -1,101 +1,77 @@
-include("sonarForms.jl");
 
-"""
-    Data for holding different values to be visualized using plots.
-"""
-struct PlotData 
-    speedVals           :: Vector{Float32}
-    positionVals        :: Vector{Vector{Float32}}
-    angleVals           :: Vector{Float32}
-    horizontalPropVals  :: Vector{Float32}
-    verticalPropVals    :: Vector{Float32}
-    timeVals            :: Vector{Float32}
+using GLMakie
+
+function PlotSoundSpeedProfile(
+    ds :: AbstractArray{<:AbstractFloat}, 
+    ts :: AbstractArray{<:AbstractFloat}, 
+    ss :: AbstractArray{<:AbstractFloat},
+    speedFunc :: Function
+    )
+
+    if (length(ds) != length(ts) || length(ds) != length(ss))
+        error("Number of values for depth, temperature and salinity must be equal.");
+    end
+
+    cs = map((d,t,s) -> speedFunc(d,t,s),ds,ts,ss)
+    ps = map((d,s,c) -> (d,s,c), ds,ss,cs);
+
+    fig = Figure()
+    ax = Axis3(fig[1,1],xlabel = "Depth", ylabel = "Salinity",zlabel = "Velocity")
+    lines!(
+        ax,
+        ps[2:length(ps)],
+        color = ts[2:length(ps)],
+        linewidth = 5.0,
+        joinstyle = :round
+    )    
+    display(fig)
 end
 
+function PlotSoundSpeedProfile(
+    ds :: LinRange{<:AbstractFloat,<:Integer}, 
+    ts :: LinRange{<:AbstractFloat,<:Integer}, 
+    ss :: LinRange{<:AbstractFloat,<:Integer},
+    speedFunc :: Function
+)
+    dArray = collect(ds);
+    tArray = collect(ts);
+    sArray = collect(ss);
 
-"""
-    PreparePlotData(rays :: Vector{RayData},timeVals :: Vector{Float32}) :: PlotData
-    speedVals    = map(x -> (x.speed), rays);
-
-    Prepares the interesting data for plotting
-"""
-function PreparePlotData(rays :: Vector{RayData},timeVals :: Vector{Float32}) :: PlotData
-    speedVals    = map(x -> (x.speed), rays);
-    positionVals = map(x -> (x.position), rays);
-    angleVals    = map(x -> (x.angle), rays);
-    
-    changeAmount = size(positionVals,1) - 1;
-    
-    horizontalPropVals = Vector{Float32}(undef, changeAmount);
-    verticalPropVals   = Vector{Float32}(undef, changeAmount);
-    for i = 1:(changeAmount-1)
-        horizontalPropVals[i] = positionVals[i+1][1] - positionVals[i][1];
-        verticalPropVals[i]   = positionVals[i+1][2] - positionVals[i][2];
-    end 
-
-    return PlotData(speedVals,positionVals,angleVals,horizontalPropVals,verticalPropVals,timeVals);
+    PlotSoundSpeedProfile(dArray,tArray,sArray,speedFunc);
 end
 
-
-
-"""
-    PlotData(plotDatas)
-
-    Plots the interesting data
-"""
-function PlotData(plotDatas)
-    
-
-    xPlots = [];
-    yPlots = [];
-
+function PlotRayAttributes((ss,rs,zs,ξs,ζs) :: Tuple{Vector{<:AbstractFloat},Vector{<:AbstractFloat},Vector{<:AbstractFloat},Vector{<:AbstractFloat},Vector{<:AbstractFloat}}) 
     fig = Figure();
 
-    titles = [
-        ("Speed Relative to Elapsed Time"),
-        ("Speed Relative to Depth")
-    ] 
-
-    labels = [
-        ("Elapsed Time (s)","Speed (m/s)"),
-        ("Depth (m)","Speed (m/s)")
-    ];
-
-
-    Axis(fig[1,1], title = "Ray Paths", yreversed = true);
-
-    # for i in eachindex(labels)
-    #     for j in eachindex(plotDatas)
-    #         Axis(fig[2,1][j, i], title = titles[i],
-    #             xlabel = labels[i][1],
-    #             ylabel = labels[i][2]
-    #         );
-    #     end
-    # end
-
+    Axis(fig[1,1], title = "Ray ξ Attribute", xlabel = "Arclength (m)", ylabel = "ξ");
+    Axis(fig[1,2], title = "Ray ζ Attribute", xlabel = "Arclength (m)", ylabel = "ζ");
+    Axis(fig[2,1], title = "Ray Propagation", xlabel = "Horizontal Position (m)", ylabel = "Depth (m)",yreversed = true);
     
-    for i in eachindex(plotDatas)
-        plotData = plotDatas[i];
-        
-        # lines!(
-        #     fig[2,1][i,2],
-        #     plotData.timeVals,
-        #     plotData.speedVals,
-        #     );
-        # lines!(
-        #     fig[2,1][i,1],
-        #     map(x -> x[2],plotData.positionVals),
-        #     plotData.speedVals,
-        # );
-        
-        append!(xPlots,map(x -> x[1],plotData.positionVals));
-        append!(yPlots,map(x -> x[2],plotData.positionVals)); 
-    end
-    
-    scatter!(
-        fig[1,1],
-        xPlots,
-        yPlots,
-    );
-    return fig;
+    PlotRayLines((ss,rs,zs,ξs,ζs),fig);
+    display(fig)
 end
+
+function PlotRayLines(
+    (ss,rs,zs,ξs,ζs) :: Tuple{Vector{<:AbstractFloat},Vector{<:AbstractFloat},Vector{<:AbstractFloat},Vector{<:AbstractFloat},Vector{<:AbstractFloat}},
+    fig :: Figure
+)
+    lines!(fig[1,1],ss, ξs);
+    lines!(fig[1,2],ss, ζs);
+    lines!(fig[2,1],rs,zs);
+end
+
+function PlotMultipleRayAttributes(res)
+    fig = Figure();
+    
+    Axis(fig[1,1], title = "Ray ξ Attribute", xlabel = "Arclength (m)", ylabel = "ξ");
+    Axis(fig[1,2], title = "Ray ζ Attribute", xlabel = "Arclength (m)", ylabel = "ζ");
+    Axis(fig[2,1], title = "Ray Propagation", xlabel = "Horizontal Position (m)", ylabel = "Depth (m)", yreversed = true);
+    
+    for r in res
+        PlotRayLines(r,fig);
+    end 
+    display(fig)
+end
+
+
+function PlotBathymetry()
